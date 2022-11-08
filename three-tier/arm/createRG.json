@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "0.1.0.0",
+  "parameters": {
+    "rgName": {
+      "type": "array"
+    },
+    "location": {
+      "type": "string"
+    },
+    "AzureConnection": {
+      "type": "string",
+      "defaultValue": "CTS Team"
+    },
+    "solutionPrefix": {
+      "type": "string",
+      "defaultValue": "fcmsaas"
+    },
+    "create_date": {
+      "type": "string",
+      "defaultValue": "[utcNow('yyyy-MM-dd')]"
+    },
+    "environmentClass": {
+      "type": "string",
+      "defaultValue": "D"
+    },
+    "INSTANCE_ID": {
+      "type": "string"
+    },
+    "NAME": {
+      "type": "string"
+    },
+    "DATA_ZONE": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "standardTags":{
+      "Creator": "[parameters('AzureConnection')]",
+      "Date": "[parameters('create_date')]",
+      "SolutionPrefix": "[parameters('solutionPrefix')]",
+	    "INSTANCE_ID": "[parameters('INSTANCE_ID')]",
+      "NAME": "[parameters('NAME')]",
+      "DATA_ZONE": "[parameters('DATA_ZONE')]",
+      "EnvironmentClass": "[parameters('environmentClass')]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "name": "[concat(parameters('rgName')[copyIndex()])]",
+	    "location": "[parameters('location')]",
+      "apiVersion": "2019-10-01",
+      "dependsOn": [],
+      "tags":  "[union(variables('standardTags'),json('{\"ResourceType\":\"RG\"}'))]",
+      "properties": {   
+      },
+      "copy": {
+        "count": "[length(parameters('rgName'))]",
+        "name": "rgcopy"
+      }
+    }
+	]
+}

@@ -1,0 +1,35 @@
+{
+   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+   "contentVersion": "1.0.0.0",
+   "parameters": {
+      "uuid": {
+         "defaultValue": "",
+         "type": "String"
+      },
+      "vnetName": {
+         "type": "string",
+         "defaultValue": "",
+         "metadata": {
+            "description": "VNet name"
+         }
+      },
+      "subnetAddressRange1": {
+         "type": "string",
+         "defaultValue": "",
+         "metadata": {
+            "description": "Subnet 1 Address Range"
+         }
+      }
+   },
+   "resources": [
+      {
+         "apiVersion": "2018-10-01",
+         "type": "Microsoft.Network/virtualNetworks/subnets",
+         "location": "[resourceGroup().location]",
+         "name": "[concat(parameters('vnetName'), '/', parameters('uuid'), 'apsub')]",
+         "properties": {
+            "addressPrefix": "[parameters('subnetAddressRange1')]"
+         }
+      }
+   ]
+}

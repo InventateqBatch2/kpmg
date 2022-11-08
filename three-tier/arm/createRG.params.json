@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "NAME": {
+      "value": "classatestsoltion"
+    },
+    "environmentClass": {
+      "value": "B"
+    },
+    "DATA_ZONE": {
+      "value": "live"
+    },
+    "AzureConnection": {
+      "value": "e413e512-d3bd-4da1-aa78-da72e6113560"
+    },
+    "location": {
+      "value": "northeurope"
+    },
+    "INSTANCE_ID": {
+      "value": "3201994c-ef22-48c4-9d00-374d4cbf0b0e"
+    },
+    "solutionPrefix": {
+      "value": "rlfty"
+    }
+  }
+}

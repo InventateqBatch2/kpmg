@@ -1,0 +1,655 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"uuid": {
+			"defaultValue": "",
+			"type": "String"
+		},
+		"location": {
+			"defaultValue": "",
+			"type": "String"
+		},
+		"vnetName": {
+			"defaultValue": "",
+			"type": "String"
+		},
+		"vnetRG": {
+			"type": "String",
+			"metadata": {
+				"description": "Name of the resource group for the existing virtual network"
+			}
+		},
+		"vNetNewOrExisting": {
+			"defaultValue": "existing",
+			"allowedValues": [
+				"new",
+				"existing"
+			],
+			"type": "String",
+			"metadata": {
+				"description": "Specify whether to create a new or existing virtual network for the VM."
+			}
+		},
+		"Vm_Size": {
+			"defaultValue": "Standard_D4s_v3",
+			"allowedValues": [
+				"Standard_B4ms",
+                "Standard_D4s_v3"
+			],
+			"type": "String"
+		},
+		"virtualMachines__username": {
+			"type": "String",
+			"metadata": {
+				"description": "Username for the Virtual Machine."
+			}
+		},
+		"ssh_pub_key": {
+			"type": "SecureString",
+			"metadata": {
+				"description": "Ssh key for the virtual machines"
+			}
+		},
+		"tagsorgId": {
+			"type": "String",
+			"metadata": {
+				"description": "enter the OrgID here"
+			}
+		},
+		"tagstemplateversion": {
+			"type": "String",
+			"metadata": {
+				"description": "enter the templateversion here"
+			}
+		},
+		"tagslabels": {
+			"type": "String",
+			"metadata": {
+				"description": "enter the label here"
+			}
+		}
+
+	},
+	"variables": {
+		"subnetName": "[concat(parameters('uuid'), 'apsub')]",
+		"subnetRef": "[resourceId(parameters('vnetRG'), 'Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('subnetName'))]",
+		"Ap_virtualMachines__name": "[concat(parameters('uuid'), 't241')]",
+		"Ap_Nic_Name": "[concat(parameters('uuid'), '-t241nic')]",
+		"DB_virtualMachines__name": "[concat(parameters('uuid'), 'h21')]",
+		"Db_Nic_Name": "[concat(parameters('uuid'), '-h21nic')]",
+		"loadBalancer_Name": "[concat(parameters('uuid'), 'lb')]",
+		"publicIP_name": "[concat(variables('loadBalancer_Name'), '_pip')]",
+		"publicIP_externalid": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIP_name'))]",
+		"ap_Nsg_name": "[concat(parameters('uuid'), 't24Nsg')]",
+		"availabilitySet_name": "[concat(parameters('uuid'), '-as')]"
+	},
+	"resources": [{
+			"type": "Microsoft.Network/virtualNetworks",
+			"apiVersion": "2018-10-01",
+			"name": "[parameters('vnetName')]",
+			"location": "[parameters('Location')]",
+			"properties": {
+				"addressSpace": {
+					"addressPrefixes": [
+						"10.0.0.0/16"
+					]
+				},
+				"subnets": [{
+					"name": "[variables('subnetName')]",
+					"properties": {
+						"addressPrefix": "10.0.0.0/24"
+					}
+				}]
+			},
+			"condition": "[equals(parameters('vNetNewOrExisting'), 'new')]"
+		},
+		{
+			"type": "Microsoft.Network/networkInterfaces",
+			"apiVersion": "2019-11-01",
+			"name": "[variables('Db_Nic_Name')]",
+			"location": "[parameters('location')]",
+			"dependsOn": [],
+			"tags": {
+				"uuid": "[parameters('uuid')]",
+				"templateversion": "[parameters('tagstemplateversion')]",
+				"orgId": "[parameters('tagsorgId')]",
+				"labels": "[parameters('tagslabels')]",
+				"subscription": "dev",
+				"category": "tenant",
+				"name": "wildfly-h2",
+				"stack": "wildfly-h2",
+				"owner": "marketplace"
+			},
+			"properties": {
+				"ipConfigurations": [{
+					"name": "[variables('Db_Nic_Name')]",
+					"properties": {
+						"privateIPAllocationMethod": "Dynamic",
+						"subnet": {
+							"id": "[variables('subnetRef')]"
+						},
+						"primary": true,
+						"privateIPAddressVersion": "IPv4"
+					}
+				}],
+				"dnsSettings": {
+					"dnsServers": []
+				},
+				"enableAcceleratedNetworking": false,
+				"enableIPForwarding": false
+			}
+		},
+		{
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"apiVersion": "2019-11-01",
+			"name": "[variables('ap_Nsg_name')]",
+			"location": "[parameters('location')]",
+			"tags": {
+				"uuid": "[parameters('uuid')]",
+				"templateversion": "[parameters('tagstemplateversion')]",
+				"orgId": "[parameters('tagsorgId')]",
+				"labels": "[parameters('tagslabels')]",
+				"subscription": "dev",
+				"category": "tenant",
+				"name": "wildfly-h2",
+				"stack": "wildfly-h2",
+				"owner": "marketplace"
+			},
+			"properties": {
+				"securityRules": [{
+						"name": "[concat(variables('ap_Nsg_name'), '-443-nsg')]",
+						"properties": {
+							"description": "[concat(variables('ap_Nsg_name'), '-443')]",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"destinationPortRange": "443",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 110,
+							"direction": "Inbound",
+							"sourcePortRanges": [],
+							"destinationPortRanges": [],
+							"sourceAddressPrefixes": [],
+							"destinationAddressPrefixes": []
+						}
+					},
+					{
+						"name": "[concat(variables('ap_Nsg_name'), '-80-nsg')]",
+						"properties": {
+							"description": "[concat(variables('ap_Nsg_name'), '-80')]",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"destinationPortRange": "80",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 140,
+							"direction": "Inbound",
+							"sourcePortRanges": [],
+							"destinationPortRanges": [],
+							"sourceAddressPrefixes": [],
+							"destinationAddressPrefixes": []
+						}
+					},
+					{
+						"name": "[concat(variables('ap_Nsg_name'), '-9080-nsg')]",
+						"properties": {
+							"description": "[concat(variables('ap_Nsg_name'), '-9080')]",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"destinationPortRange": "9080",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 120,
+							"direction": "Inbound",
+							"sourcePortRanges": [],
+							"destinationPortRanges": [],
+							"sourceAddressPrefixes": [],
+							"destinationAddressPrefixes": []
+						}
+					},
+					{
+						"name": "[concat(variables('ap_Nsg_name'), '-8161-nsg')]",
+						"properties": {
+							"description": "[concat(variables('ap_Nsg_name'), '-8161')]",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"destinationPortRange": "8161",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 130,
+							"direction": "Inbound",
+							"sourcePortRanges": [],
+							"destinationPortRanges": [],
+							"sourceAddressPrefixes": [],
+							"destinationAddressPrefixes": []
+						}
+					},
+					{
+						"name": "[concat(variables('ap_Nsg_name'), '-7099-nsg')]",
+						"properties": {
+							"description": "[concat(variables('ap_Nsg_name'), '-7099')]",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"destinationPortRange": "7099",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 150,
+							"direction": "Inbound",
+							"sourcePortRanges": [],
+							"destinationPortRanges": [],
+							"sourceAddressPrefixes": [],
+							"destinationAddressPrefixes": []
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "Microsoft.Network/publicIPAddresses",
+			"apiVersion": "2019-11-01",
+			"name": "[variables('publicIP_name')]",
+			"location": "[parameters('location')]",
+			"tags": {
+				"uuid": "[parameters('uuid')]",
+				"templateversion": "[parameters('tagstemplateversion')]",
+				"orgId": "[parameters('tagsorgId')]",
+				"labels": "[parameters('tagslabels')]",
+				"subscription": "dev",
+				"category": "tenant",
+				"name": "wildfly-h2",
+				"stack": "wildfly-h2",
+				"owner": "marketplace"
+			},
+			"sku": {
+				"name": "Basic"
+			},
+			"properties": {
+				"publicIPAddressVersion": "IPv4",
+				"publicIPAllocationMethod": "Static",
+				"ipTags": []
+			}
+		},
+		{
+			"type": "Microsoft.Compute/availabilitySets",
+			"apiVersion": "2019-07-01",
+			"name": "[variables('availabilitySet_name')]",
+			"location": "[parameters('location')]",
+			"tags": {
+				"uuid": "[parameters('uuid')]",
+				"templateversion": "[parameters('tagstemplateversion')]",
+				"orgId": "[parameters('tagsorgId')]",
+				"labels": "[parameters('tagslabels')]",
+				"subscription": "dev",
+				"category": "tenant",
+				"name": "wildfly-h2",
+				"stack": "wildfly-h2",
+				"owner": "marketplace"
+			},
+			"sku": {
+				"name": "Aligned"
+			},
+			"properties": {
+				"platformUpdateDomainCount": 5,
+				"platformFaultDomainCount": 2,
+				"virtualMachines": [{
+						"id": "[resourceId('Microsoft.Compute/virtualMachines', variables('Ap_virtualMachines__name'))]"
+					},
+					{
+						"id": "[resourceId('Microsoft.Compute/virtualMachines', variables('DB_virtualMachines__name'))]"
+					}
+				]
+			}
+		},
+		{
+			"type": "Microsoft.Network/networkInterfaces",
+			"apiVersion": "2019-11-01",
+			"name": "[variables('Ap_Nic_Name')]",
+			"location": "[parameters('location')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name'))]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', variables('ap_Nsg_name'))]"
+			],
+			"tags": {
+				"uuid": "[parameters('uuid')]",
+				"templateversion": "[parameters('tagstemplateversion')]",
+				"orgId": "[parameters('tagsorgId')]",
+				"labels": "[parameters('tagslabels')]",
+				"subscription": "dev",
+				"category": "tenant",
+				"name": "wildfly-h2",
+				"stack": "wildfly-h2",
+				"owner": "marketplace"
+			},
+			"properties": {
+				"ipConfigurations": [{
+					"name": "[variables('Ap_Nic_Name')]",
+					"properties": {
+						"privateIPAllocationMethod": "Dynamic",
+						"subnet": {
+							"id": "[variables('subnetRef')]"
+						},
+						"primary": true,
+						"privateIPAddressVersion": "IPv4",
+						"loadBalancerBackendAddressPools": [{
+							"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/backendAddressPools/', variables('loadBalancer_Name'), '-bepool'))]"
+						}],
+						"loadBalancerInboundNatRules": [
+							{
+								"id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatRules', variables('loadBalancer_Name'), concat(variables('loadBalancer_Name'), 'inbound_nat_9080NAT-rule'))]"
+							},
+							{
+								"id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatRules', variables('loadBalancer_Name'), concat(variables('loadBalancer_Name'), 'inbound_nat_8161NAT-rule'))]"
+							},
+							{
+								"id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatRules', variables('loadBalancer_Name'), concat(variables('loadBalancer_Name'), 'inbound_nat_9092NAT-rule'))]"
+							},
+							{
+								"id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatRules', variables('loadBalancer_Name'), concat(variables('loadBalancer_Name'), 'inbound_nat_80NAT-rule'))]"
+							},
+							{
+								"id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatRules', variables('loadBalancer_Name'), concat(variables('loadBalancer_Name'), 'inbound_nat_7099NAT-rule'))]"
+							}
+						]
+					}
+				}],
+				"dnsSettings": {
+					"dnsServers": []
+				},
+				"enableAcceleratedNetworking": false,
+				"enableIPForwarding": false,
+				"networkSecurityGroup": {
+					"id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('ap_Nsg_name'))]"
+				}
+			}
+		},
+		{
+			"type": "Microsoft.Compute/virtualMachines",
+			"apiVersion": "2019-07-01",
+			"name": "[variables('Ap_virtualMachines__name')]",
+			"location": "[parameters('location')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySet_name'))]",
+				"[resourceId('Microsoft.Network/networkInterfaces', variables('Ap_Nic_Name'))]"
+			],
+			"tags": {
+				"uuid": "[parameters('uuid')]",
+				"templateversion": "[parameters('tagstemplateversion')]",
+				"orgId": "[parameters('tagsorgId')]",
+				"labels": "[parameters('tagslabels')]",
+				"subscription": "dev",
+				"category": "tenant",
+				"name": "wildfly-h2",
+				"stack": "wildfly-h2",
+				"owner": "marketplace",
+				"type": "t24",
+				"sandbox_application_class": "app"
+			},
+			"properties": {
+				"availabilitySet": {
+					"id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySet_name'))]"
+				},
+				"hardwareProfile": {
+					"vmSize": "[parameters('Vm_Size')]"
+				},
+				"storageProfile": {
+					"imageReference": {
+						"publisher": "RedHat",
+						"offer": "RHEL",
+						"sku": "7-RAW",
+						"version": "latest"
+					},
+					"osDisk": {
+						"osType": "Linux",
+						"name": "[concat(variables('Ap_virtualMachines__name'), '-osdisk')]",
+						"createOption": "FromImage",
+						"caching": "ReadWrite",
+						"diskSizeGB": 127
+					}
+				},
+				"networkProfile": {
+					"networkInterfaces": [{
+						"id": "[resourceId('Microsoft.Network/networkInterfaces', variables('Ap_Nic_Name'))]"
+					}]
+				},
+				"osProfile": {
+					"computerName": "[variables('Ap_virtualMachines__name')]",
+					"adminUsername": "[parameters('virtualMachines__username')]",
+					"LinuxConfiguration": {
+						"provisionVMAgent": true,
+						"ssh": {
+							"publicKeys": [{
+								"path": "[concat('/home/', parameters('virtualMachines__username'), '/.ssh/authorized_keys')]",
+								"keyData": "[parameters('ssh_pub_key')]"
+							}]
+						}
+					}
+				}
+			}
+		},
+		{
+			"type": "Microsoft.Compute/virtualMachines",
+			"apiVersion": "2019-07-01",
+			"name": "[variables('DB_virtualMachines__name')]",
+			"location": "[parameters('location')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySet_name'))]",
+				"[resourceId('Microsoft.Network/networkInterfaces', variables('Db_Nic_Name'))]"
+			],
+			"tags": {
+				"uuid": "[parameters('uuid')]",
+				"templateversion": "[parameters('tagstemplateversion')]",
+				"orgId": "[parameters('tagsorgId')]",
+				"labels": "[parameters('tagslabels')]",
+				"subscription": "dev",
+				"category": "tenant",
+				"name": "wildfly-h2",
+				"stack": "wildfly-h2",
+				"owner": "marketplace",
+				"type": "h2",
+				"sandbox_application_class": "db"
+			},
+			"properties": {
+				"availabilitySet": {
+					"id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySet_name'))]"
+				},
+				"hardwareProfile": {
+					"vmSize": "[parameters('Vm_Size')]"
+				},
+				"storageProfile": {
+					"imageReference": {
+						"publisher": "RedHat",
+						"offer": "RHEL",
+						"sku": "7-RAW",
+						"version": "latest"
+					},
+					"osDisk": {
+						"osType": "Linux",
+						"name": "[concat(variables('DB_virtualMachines__name'), '-osdisk')]",
+						"createOption": "FromImage",
+						"caching": "ReadWrite",
+						"diskSizeGB": 127
+					},
+					"dataDisks": [{
+						"lun": 0,
+						"name": "[concat(variables('DB_virtualMachines__name'), '-datadisk1')]",
+						"createOption": "Empty",
+						"caching": "None",
+						"diskSizeGB": 50,
+						"toBeDetached": false
+					}]
+				},
+				"networkProfile": {
+					"networkInterfaces": [{
+						"id": "[resourceId('Microsoft.Network/networkInterfaces', variables('Db_Nic_Name'))]"
+					}]
+				},
+				"osProfile": {
+					"computerName": "[variables('DB_virtualMachines__name')]",
+					"adminUsername": "[parameters('virtualMachines__username')]",
+					"LinuxConfiguration": {
+						"provisionVMAgent": true,
+						"ssh": {
+							"publicKeys": [{
+								"path": "[concat('/home/', parameters('virtualMachines__username'), '/.ssh/authorized_keys')]",
+								"keyData": "[parameters('ssh_pub_key')]"
+							}]
+						}
+					}
+				}
+			}
+		},
+		{
+			"type": "Microsoft.Network/loadBalancers",
+			"apiVersion": "2019-11-01",
+			"name": "[variables('loadBalancer_Name')]",
+			"location": "[parameters('location')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIP_name'))]"
+			],
+			"tags": {
+				"uuid": "[parameters('uuid')]",
+				"templateversion": "[parameters('tagstemplateversion')]",
+				"orgId": "[parameters('tagsorgId')]",
+				"labels": "[parameters('tagslabels')]",
+				"subscription": "dev",
+				"category": "tenant",
+				"name": "wildfly-h2",
+				"stack": "wildfly-h2",
+				"owner": "marketplace"
+			},
+			"sku": {
+				"name": "Basic"
+			},
+			"properties": {
+				"frontendIPConfigurations": [{
+					"name": "[concat(variables('loadBalancer_Name'), '-fip')]",
+					"properties": {
+						"privateIPAllocationMethod": "Dynamic",
+						"publicIPAddress": {
+							"id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIP_name'))]"
+						},
+						"privateIPAddressVersion": "IPv4"
+					}
+				}],
+				"backendAddressPools": [{
+					"name": "[concat(variables('loadBalancer_Name'), '-bepool')]"
+				}],
+				"loadBalancingRules": [{
+					"name": "[concat(variables('loadBalancer_Name'), 'web-rule')]",
+					"properties": {
+						"frontendIPConfiguration": {
+							"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/frontendIPConfigurations/', variables('loadBalancer_Name'), '-fip'))]"
+						},
+						"frontendPort": 443,
+						"backendPort": 443,
+						"enableFloatingIP": false,
+						"idleTimeoutInMinutes": 4,
+						"protocol": "Tcp",
+						"enableTcpReset": false,
+						"loadDistribution": "SourceIP",
+						"backendAddressPool": {
+							"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/backendAddressPools/', variables('loadBalancer_Name'), '-bepool'))]"
+						},
+						"probe": {
+							"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/probes/', variables('loadBalancer_Name'), 'Tcp-probe'))]"
+						}
+					}
+				}],
+				"probes": [{
+					"name": "[concat(variables('loadBalancer_Name'), 'Tcp-probe')]",
+					"properties": {
+						"protocol": "Tcp",
+						"port": 443,
+						"intervalInSeconds": 15,
+						"numberOfProbes": 4
+					}
+				}],
+				"inboundNatRules": [
+					{
+						"name": "[concat(variables('loadBalancer_Name'), 'inbound_nat_9080NAT-rule')]",
+						"properties": {
+							"frontendIPConfiguration": {
+								"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/frontendIPConfigurations/', variables('loadBalancer_Name'), '-fip'))]"
+							},
+							"frontendPort": 9080,
+							"backendPort": 9080,
+							"enableFloatingIP": false,
+							"idleTimeoutInMinutes": 5,
+							"protocol": "Tcp",
+							"enableTcpReset": false
+						}
+					},
+					{
+						"name": "[concat(variables('loadBalancer_Name'), 'inbound_nat_8161NAT-rule')]",
+						"properties": {
+							"frontendIPConfiguration": {
+								"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/frontendIPConfigurations/', variables('loadBalancer_Name'), '-fip'))]"
+							},
+							"frontendPort": 8161,
+							"backendPort": 8161,
+							"enableFloatingIP": false,
+							"idleTimeoutInMinutes": 5,
+							"protocol": "Tcp",
+							"enableTcpReset": false
+						}
+					},
+					{
+						"name": "[concat(variables('loadBalancer_Name'), 'inbound_nat_9092NAT-rule')]",
+						"properties": {
+							"frontendIPConfiguration": {
+								"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/frontendIPConfigurations/', variables('loadBalancer_Name'), '-fip'))]"
+							},
+							"frontendPort": 9092,
+							"backendPort": 9092,
+							"enableFloatingIP": false,
+							"idleTimeoutInMinutes": 5,
+							"protocol": "Tcp",
+							"enableTcpReset": false
+						}
+					},
+					{
+						"name": "[concat(variables('loadBalancer_Name'), 'inbound_nat_80NAT-rule')]",
+						"properties": {
+							"frontendIPConfiguration": {
+								"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/frontendIPConfigurations/', variables('loadBalancer_Name'), '-fip'))]"
+							},
+							"frontendPort": 80,
+							"backendPort": 80,
+							"enableFloatingIP": false,
+							"idleTimeoutInMinutes": 5,
+							"protocol": "Tcp",
+							"enableTcpReset": false
+						}
+					},
+					{
+						"name": "[concat(variables('loadBalancer_Name'), 'inbound_nat_7099NAT-rule')]",
+						"properties": {
+							"frontendIPConfiguration": {
+								"id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer_Name')), concat('/frontendIPConfigurations/', variables('loadBalancer_Name'), '-fip'))]"
+							},
+							"frontendPort": 7099,
+							"backendPort": 7099,
+							"enableFloatingIP": false,
+							"idleTimeoutInMinutes": 5,
+							"protocol": "Tcp",
+							"enableTcpReset": false
+						}
+					}
+				],
+				"inboundNatPools": []
+			}
+		}
+	],
+	"outputs": {
+		"LoadbalancerIP": {
+			"type": "String",
+			"value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('publicIP_name'))).IpAddress]"
+		}
+	}
+}

@@ -1,0 +1,39 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "uuid": {
+            "value": ""
+        },
+        "location": {
+            "value": "ukwest"
+        },
+        "vnetName": {
+            "value": "sandboxVnetdev1"
+        },
+        "vNetNewOrExisting": {
+            "value": "existing"
+        },
+        "vnetRG": {
+            "value": "dev1CloudEnvRG"
+        },
+        "virtualMachines__username": {
+            "value": "mpadmin"
+        },
+        "ssh_pub_key": {
+            "value": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCbyh6y8UYIwe8ToXKoL9KmA/fAkSu7KPi/sB0kWyCLswh3ta6n1HXr3bqbxdnaoi76xzEmof3scv5KOHZfeAn6EN+KoPL6pKAYKOlQN3qitNBFmZg28Brn+wVGUax6z7mMHSsxNDAHwNLjHRRwm5nKwfRXlSesoFIz2W8+Kq25bpDrhA4cSOsbx1ju9Nvvj87sBEV7gXL+96iQbNLfEeplBHxXmKuWiZ85kp7hQD6Kk2zK6xeeSsrHVFWDJcbGtfIMNAfDAxpTrSxWUjebRHIkzS9cTVNaiG7gy4xCkcdJffvkcb9niS6m8v+BDcxzYY050QdgqBKLh3UoLJYgjHx 1erkv8rl3gwlc"
+        },
+        "Vm_Size": {
+            "value": "Standard_D4s_v3"
+        },
+        "tagsorgId": {
+            "value": ""
+        },
+        "tagstemplateversion": {
+            "value": ""
+        },
+        "tagslabels": {
+            "value": ""
+        }
+    }
+}
